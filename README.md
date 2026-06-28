@@ -1,6 +1,6 @@
 # check.el
 
-Anti-hallucination firewall for Emacs. Validates commands before execution.
+The universal anti-hallucination engine for Emacs.
 
 ## Install
 
@@ -23,10 +23,10 @@ Or set `GOL_CLIENT_ID` environment variable instead.
 
 ## Commands
 
-- `M-x check-validate-command` — validate a shell command
-- `M-x check-validate-region` — validate selected region
-- `M-x check-validate-line` — validate current line
-- `M-x check-setup` — set Client ID interactively
+- `M-x check-validate-command`
+- `M-x check-validate-region`
+- `M-x check-validate-line`
+- `M-x check-setup`
 
 ## Get a Client ID
 
