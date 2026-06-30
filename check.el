@@ -29,12 +29,52 @@
   :group 'check)
 
 (defconst check--api-url "https://triage.golproductions.com/preflight")
-(defconst check--version "1.0.0")
+(defconst check--instant-url "https://triage.golproductions.com/instant-key")
+(defconst check--channel "emacs")
+(defconst check--version "1.0.1")
+
+(defun check--device-fingerprint ()
+  "One-way hash of coarse machine facts. No personal data.
+Used only by the server to rate-limit free-key minting."
+  (secure-hash 'sha256
+               (mapconcat #'identity
+                          (list (or (system-name) "")
+                                (symbol-name system-type)
+                                (or (user-login-name) ""))
+                          "|")))
+
+(defun check--mint-instant-key ()
+  "Mint a free key with no signup. Persist and return it, or nil on failure."
+  (let ((url-request-method "POST")
+        (url-request-extra-headers
+         `(("Content-Type" . "application/json")
+           ("User-Agent" . ,(concat "emacs/" check--version))))
+        (url-request-data
+         (encode-coding-string
+          (json-encode `(("fingerprint" . ,(check--device-fingerprint))
+                         ("channel" . ,check--channel)))
+          'utf-8)))
+    (condition-case nil
+        (let ((buf (url-retrieve-synchronously check--instant-url t t 10)))
+          (when buf
+            (with-current-buffer buf
+              (goto-char (point-min))
+              (when (re-search-forward "\n\n" nil t)
+                (let* ((json-object-type 'alist)
+                       (data (json-read))
+                       (cid (alist-get 'client_id data)))
+                  (when (and cid (not (string-empty-p cid)))
+                    (setq check-client-id cid)
+                    (customize-save-variable 'check-client-id cid)
+                    cid))))))
+      (error nil))))
 
 (defun check--validate (command callback)
   "Validate COMMAND via Check API, call CALLBACK with result."
   (when (string-empty-p check-client-id)
-    (user-error "Check: No Client ID set. Customize `check-client-id' or set GOL_CLIENT_ID env var"))
+    ;; No key yet: mint one instantly. No email, no browser.
+    (unless (check--mint-instant-key)
+      (user-error "Check: could not activate. Check your connection and try again")))
   (let ((url-request-method "POST")
         (url-request-extra-headers
          `(("Content-Type" . "application/json")
@@ -44,6 +84,7 @@
          (encode-coding-string
           (json-encode `(("command" . ,command)
                          ("platform" . "emacs")
+                         ("channel" . ,check--channel)
                          ("v" . ,check--version)))
           'utf-8)))
     (url-retrieve
