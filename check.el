@@ -2,7 +2,7 @@
 
 ;; Author: GOL Productions
 ;; URL: https://github.com/golproductions/check.el
-;; Version: 1.0.0
+;; Version: 1.0.1
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: tools, ai, validation
 
